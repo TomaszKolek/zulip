@@ -22,39 +22,7 @@ import re
 import ujson
 from functools import wraps
 
-from .github import GitHubWebhookHandler
-
-
-@authenticated_api_view
-@has_request_variables
-def api_github_landing(request,
-                       user_profile,
-                       event=REQ,
-                       payload=REQ(validator=check_dict([])),
-                       branches=REQ(default=''),
-                       stream=REQ(default=''),
-                       version=REQ(converter=to_non_negative_int, default=1),
-                       commit_stream=REQ(default=''),
-                       issue_stream=REQ(default=''),
-                       exclude_pull_requests=REQ(converter=flexible_boolean, default=False),
-                       exclude_issues=REQ(converter=flexible_boolean, default=False),
-                       exclude_commits=REQ(converter=flexible_boolean, default=False),
-                       emphasize_branch_in_topic=REQ(converter=flexible_boolean, default=False),
-                       ):
-    GitHubWebhookHandler().handle(request,
-                                  user_profile,
-                                  event,
-                                  payload,
-                                  branches,
-                                  stream,
-                                  version,
-                                  commit_stream,
-                                  issue_stream,
-                                  exclude_pull_requests,
-                                  exclude_issues,
-                                  exclude_commits,
-                                  emphasize_branch_in_topic,
-                                 )
+from .github import build_commit_list_content, build_message_from_gitlog
 
 
 def guess_zulip_user_from_jira(jira_username, realm):
@@ -415,8 +383,15 @@ def api_beanstalk_webhook(request, user_profile,
     git_repo = 'uri' in payload
     if git_repo:
         # To get a linkable url,
-        name = payload['repository']['name']
-        subject, content = GitHubWebhookHandler.build_message_from_gitlog(payload, name)
+        name = payload.get('repository').get('name')
+        subject, content = build_message_from_gitlog(user_profile,
+                                                     payload['repository']['name'],
+                                                     payload['ref'],
+                                                     payload['commits'],
+                                                     payload['before'],
+                                                     payload['after'],
+                                                     payload['repository']['url'],
+                                                     payload['pusher_name'])
     else:
         author = payload.get('author_full_name')
         url = payload.get('changeset_url')
@@ -492,7 +467,7 @@ def api_bitbucket_webhook(request, user_profile, payload=REQ(validator=check_dic
                       payload['canon_url'] + repository['absolute_url']))
     else:
         branch = payload['commits'][-1]['branch']
-        content = GitHubWebhookHandler.build_commit_list_content(commits, branch, None, payload['user'])
+        content = build_commit_list_content(commits, branch, None, payload['user'])
         subject += '/%s' % (branch,)
 
     check_send_message(user_profile, get_client("ZulipBitBucketWebhook"), "stream",
