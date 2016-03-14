@@ -864,3 +864,32 @@ class TravisHookTests(AuthedTestCase):
                                        u"Details: [changes](https://github.com/hl7-fhir/fhir-sv"
                                        u"n/compare/6dccb98bcfd9...6c457d366a31), [build log](ht"
                                        u"tps://travis-ci.org/hl7-fhir/fhir-svn/builds/92495257)"))
+
+
+class PingdomHookTests(AuthedTestCase):
+    STREAM_NAME = 'pingdom'
+    TEST_USER_EMAIL = 'hamlet@zulip.com'
+    URL_TEMPLATE = "/api/v1/external/pingdom?stream={stream}&api_key={api_key}"
+
+    def setUp(self):
+        api_key = self.get_api_key(self.TEST_USER_EMAIL)
+        self._body = ujson.dumps(ujson.loads(self.fixture_data('pingdom', 'http_up_to_down')))
+        self._url = self.URL_TEMPLATE.format(stream=self.STREAM_NAME, api_key=api_key)
+        self.subscribe_to_stream(self.TEST_USER_EMAIL, self.STREAM_NAME)
+
+    def test_pingdom_from_up_to_down_http_check_message(self):
+        """
+        Tests if pingdom http check from up to down is handled correctly
+        """
+
+        self.client.post(self._url,
+                         self._body,
+                         stream_name=self.STREAM_NAME,
+                         content_type="application/json")
+
+        msg = self._get_recently_added_message()
+        self.assertEqual(msg.subject, u"Your Pingdom Test check descries something important")
+        self.assertEqual(msg.content, u"Service http://coscoscos.pl/ changed it's status from UP to DOWN")
+
+    def _get_recently_added_message(self):
+        return Message.objects.filter().order_by('-id')[0]
