@@ -251,6 +251,7 @@ TEMPLATES = [
         ],
         'APP_DIRS': False,
         'OPTIONS': {
+            'debug': DEBUG,
             'environment': 'zproject.jinja2.environment',
             'extensions': [
                 'jinja2.ext.i18n',
@@ -965,9 +966,9 @@ else:
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
 EMAIL_HOST_PASSWORD = get_secret('email_password')
-if "EMAIL_GATEWAY_PASSWORD" not in vars():
+if EMAIL_GATEWAY_PASSWORD is None:
     EMAIL_GATEWAY_PASSWORD = get_secret('email_gateway_password')
-if "AUTH_LDAP_BIND_PASSWORD" not in vars():
+if vars().get("AUTH_LDAP_BIND_PASSWORD") is None:
     AUTH_LDAP_BIND_PASSWORD = get_secret('auth_ldap_bind_password')
 
 ########################################################################
