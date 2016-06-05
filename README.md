@@ -20,21 +20,26 @@ at https://www.zulip.org.
 
 [![Build Status][1]][2]
 
+[Mypy][5] static typing [![Coverage Status][3]][4]
+
 [1]: https://travis-ci.org/zulip/zulip.svg?branch=master
 [2]: https://travis-ci.org/zulip/zulip
+[3]: https://coveralls.io/repos/github/zulip/zulip/badge.svg?branch=master
+[4]: https://coveralls.io/github/zulip/zulip?branch=master
+[5]: http://mypy-lang.org/
 
 ## Installing the Zulip Development environment
 
 The Zulip development environment is the recommended option for folks
 interested in trying out Zulip.  This is documented in
-[README.dev.md](README.dev.md).
+[README.dev.md](https://github.com/zulip/zulip/blob/master/README.dev.md).
 
 ## Running Zulip in production
 
 Zulip in production only supports Ubuntu 14.04 right now, but work is
 ongoing on adding support for additional platforms. The installation
 process is documented at https://zulip.org/server.html and in more
-detail in [README.prod.md](README.prod.md).
+detail in [README.prod.md](https://github.com/zulip/zulip/blob/master/README.prod.md).
 
 ## Ways to contribute
 

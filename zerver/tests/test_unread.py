@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-AA
 from __future__ import absolute_import
 
+from typing import Any, Dict, List
+
 from zerver.models import (
     get_user_profile_by_email, Recipient, UserMessage
 )
@@ -11,6 +13,7 @@ import ujson
 class PointerTest(AuthedTestCase):
 
     def test_update_pointer(self):
+        # type: () -> None
         """
         Posting a pointer to /update (in the form {"pointer": pointer}) changes
         the pointer we store for your UserProfile.
@@ -23,6 +26,7 @@ class PointerTest(AuthedTestCase):
         self.assertEqual(get_user_profile_by_email("hamlet@zulip.com").pointer, msg_id)
 
     def test_api_update_pointer(self):
+        # type: () -> None
         """
         Same as above, but for the API view
         """
@@ -35,6 +39,7 @@ class PointerTest(AuthedTestCase):
         self.assertEqual(get_user_profile_by_email(email).pointer, msg_id)
 
     def test_missing_pointer(self):
+        # type: () -> None
         """
         Posting json to /json/users/me/pointer which does not contain a pointer key/value pair
         returns a 400 and error message.
@@ -46,6 +51,7 @@ class PointerTest(AuthedTestCase):
         self.assertEqual(get_user_profile_by_email("hamlet@zulip.com").pointer, -1)
 
     def test_invalid_pointer(self):
+        # type: () -> None
         """
         Posting json to /json/users/me/pointer with an invalid pointer returns a 400 and error
         message.
@@ -57,6 +63,7 @@ class PointerTest(AuthedTestCase):
         self.assertEqual(get_user_profile_by_email("hamlet@zulip.com").pointer, -1)
 
     def test_pointer_out_of_range(self):
+        # type: () -> None
         """
         Posting json to /json/users/me/pointer with an out of range (< 0) pointer returns a 400
         and error message.
@@ -69,13 +76,15 @@ class PointerTest(AuthedTestCase):
 
 class UnreadCountTests(AuthedTestCase):
     def setUp(self):
+        # type: () -> None
         self.unread_msg_ids = [self.send_message(
                 "iago@zulip.com", "hamlet@zulip.com", Recipient.PERSONAL, "hello"),
                                self.send_message(
                 "iago@zulip.com", "hamlet@zulip.com", Recipient.PERSONAL, "hello2")]
 
+    # Sending a new message results in unread UserMessages being created
     def test_new_message(self):
-        # Sending a new message results in unread UserMessages being created
+        # type: () -> None
         self.login("hamlet@zulip.com")
         content = "Test message for unset read bit"
         last_msg = self.send_message("hamlet@zulip.com", "Verona", Recipient.STREAM, content)
@@ -87,6 +96,7 @@ class UnreadCountTests(AuthedTestCase):
                 self.assertFalse(um.flags.read)
 
     def test_update_flags(self):
+        # type: () -> None
         self.login("hamlet@zulip.com")
 
         result = self.client.post("/json/messages/flags",
@@ -116,6 +126,7 @@ class UnreadCountTests(AuthedTestCase):
                 self.assertEqual(msg['flags'], [])
 
     def test_update_all_flags(self):
+        # type: () -> None
         self.login("hamlet@zulip.com")
 
         message_ids = [self.send_message("hamlet@zulip.com", "iago@zulip.com",
@@ -138,6 +149,7 @@ class UnreadCountTests(AuthedTestCase):
             self.assertEqual(msg['flags'], [])
 
     def test_mark_all_in_stream_read(self):
+        # type: () -> None
         self.login("hamlet@zulip.com")
         user_profile = get_user_profile_by_email("hamlet@zulip.com")
         self.subscribe_to_stream(user_profile.email, "test_stream", user_profile.realm)
@@ -145,7 +157,7 @@ class UnreadCountTests(AuthedTestCase):
         message_id = self.send_message("hamlet@zulip.com", "test_stream", Recipient.STREAM, "hello")
         unrelated_message_id = self.send_message("hamlet@zulip.com", "Denmark", Recipient.STREAM, "hello")
 
-        events = []
+        events = [] # type: List[Dict[str, Any]]
         with tornado_redirected_to_list(events):
             result = self.client.post("/json/messages/flags", {"messages": ujson.dumps([]),
                                                                "op": "add",
@@ -179,6 +191,7 @@ class UnreadCountTests(AuthedTestCase):
 
 
     def test_mark_all_in_invalid_stream_read(self):
+        # type: () -> None
         self.login("hamlet@zulip.com")
         invalid_stream_name = ""
         result = self.client.post("/json/messages/flags", {"messages": ujson.dumps([]),
@@ -188,13 +201,14 @@ class UnreadCountTests(AuthedTestCase):
         self.assert_json_error(result, 'No such stream \'\'')
 
     def test_mark_all_in_stream_topic_read(self):
+        # type: () -> None
         self.login("hamlet@zulip.com")
         user_profile = get_user_profile_by_email("hamlet@zulip.com")
         self.subscribe_to_stream(user_profile.email, "test_stream", user_profile.realm)
 
         message_id = self.send_message("hamlet@zulip.com", "test_stream", Recipient.STREAM, "hello", "test_topic")
         unrelated_message_id = self.send_message("hamlet@zulip.com", "Denmark", Recipient.STREAM, "hello", "Denmark2")
-        events = []
+        events = [] # type: List[Dict[str, Any]]
         with tornado_redirected_to_list(events):
             result = self.client.post("/json/messages/flags", {"messages": ujson.dumps([]),
                                                                "op": "add",
@@ -227,6 +241,7 @@ class UnreadCountTests(AuthedTestCase):
 
 
     def test_mark_all_in_invalid_topic_read(self):
+        # type: () -> None
         self.login("hamlet@zulip.com")
         invalid_topic_name = "abc"
         result = self.client.post("/json/messages/flags", {"messages": ujson.dumps([]),

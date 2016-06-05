@@ -30,12 +30,14 @@ import random
 import glob
 import os
 from optparse import make_option
+from six import text_type
 from six.moves import range
-from typing import Any, Dict, Set, Tuple
+from typing import Any, Dict, List, IO, Iterable, Mapping, Set, Tuple
 
 settings.TORNADO_SERVER = None
 
 def create_users(realms, name_list, bot_type=None):
+    # type: (Mapping[str, Realm], Iterable[Tuple[text_type, str]], int) -> None
     user_set = set()
     for full_name, email in name_list:
         short_name = email_to_username(email)
@@ -43,6 +45,7 @@ def create_users(realms, name_list, bot_type=None):
     bulk_create_users(realms, user_set, bot_type)
 
 def create_streams(realms, realm, stream_list):
+    # type: (Mapping[str, Realm], Realm, Iterable[str]) -> None
     stream_set = set()
     for stream_name in stream_list:
         stream_set.add((realm.domain, stream_name))
@@ -109,6 +112,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, **options):
+        # type: (**Any) -> None
         if options["percent_huddles"] + options["percent_personals"] > 100:
             self.stderr.write("Error!  More than 100% of messages allocated.\n")
             return
@@ -257,11 +261,13 @@ class Command(BaseCommand):
 
 recipient_hash = {} # type: Dict[int, Recipient]
 def get_recipient_by_id(rid):
+    # type: (int) -> Recipient
     if rid in recipient_hash:
         return recipient_hash[rid]
     return Recipient.objects.get(id=rid)
 
 def restore_saved_messages():
+    # type: () -> None
     old_messages = []
     duplicate_suppression_hash = {} # type: Dict[str, bool]
 
@@ -276,6 +282,7 @@ def restore_saved_messages():
     # First, determine all the objects our messages will need.
     print(datetime.datetime.now(), "Creating realms/streams/etc...")
     def process_line(line):
+        # type: (str) -> None
         old_message_json = line.strip()
 
         # Due to populate_db's shakespeare mode, we have a lot of
@@ -302,6 +309,7 @@ def restore_saved_messages():
         # Lower case emails and domains; it will screw up
         # deduplication if we don't
         def fix_email(email):
+            # type: (str) -> str
             return email.strip().lower()
 
         if message_type in ["stream", "huddle", "personal"]:
@@ -346,7 +354,7 @@ def restore_saved_messages():
 
         sender_email = old_message["sender_email"]
 
-        domain = split_email_to_domain(sender_email)
+        domain = str(split_email_to_domain(sender_email))
         realm_set.add(domain)
 
         if old_message["sender_email"] not in email_set:
@@ -708,6 +716,7 @@ def restore_saved_messages():
 # - multiple messages per subject
 # - both single and multi-line content
 def send_messages(data):
+    # type: (Tuple[int, List[List[UserProfile]], Dict[str, Any], Any]) -> int
     (tot_messages, personals_pairs, options, output) = data
     random.seed(os.getpid())
     texts = open("zilencer/management/commands/test_messages.txt", "r").readlines()

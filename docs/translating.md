@@ -58,13 +58,25 @@ You can instead use:
 {% blocktrans %}This string will have {{ value }} inside.{% endblocktrans %}
 ```
 
+Zulip expects all the error messages to be translatable.  To ensure
+this, the error message passed to `json_error` and `JsonableError`
+should always be a literal string enclosed by `_()` function, e.g:
+
+```
+json_error(_('English Text'))
+JsonableError(_('English Text'))
+```
+
+To ensure we always internationalize our JSON errors messages, the
+Zulip linter (`tools/lint-all`) checks for correct usage.
+
 ## Frontend Translations
 The first step in translating the frontend is to create the translation
 files using `python manage makemessages`. This command will create
 translation files under `static/locale`, the location can be changed by
 passing an argument to the command, however make sure that the location is
-publically accessible since these files are loaded through XHR in the
-frontend which will only work with publically accessible resources.
+publicly accessible since these files are loaded through XHR in the
+frontend which will only work with publicly accessible resources.
 
 The second step is to upload the translatable strings to Transifex using
 `tx push -s -a`.

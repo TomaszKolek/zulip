@@ -19,7 +19,13 @@ zproject/settings.py
 zproject/test_settings.py
 zerver/lib/request.py
 zerver/migrations/
-zerver/tests/
+zerver/tests/test_bugdown.py
+zerver/tests/tests.py
+zerver/tests/test_email_mirror.py
+zerver/tests/test_decorators.py
+zerver/tests/test_upload.py
+zerver/tests/test_messages.py
+zerver/tests/test_hooks.py
 """.split()
 
 parser = argparse.ArgumentParser(description="Run mypy on files tracked by git.")
@@ -30,6 +36,10 @@ parser.add_argument('-m', '--modified', action='store_true', default=False, help
 parser.add_argument('-a', '--all', dest='all', action='store_true', default=False,
                     help="""run mypy on all python files, ignoring the exclude list.
                     This is useful if you have to find out which files fail mypy check.""")
+parser.add_argument('--linecoverage-report', dest='linecoverage_report', action='store_true', default=False,
+                    help="""run the linecoverage report to see annotation coverage""")
+parser.add_argument('--disallow-untyped-defs', dest='disallow_untyped_defs', action='store_true', default=False,
+                    help="""throw errors when functions are not annotated""")
 args = parser.parse_args()
 if args.all:
     exclude = []
@@ -47,9 +57,24 @@ if six.PY2 and os.path.exists(MYPY_VENV_PATH):
 else:
     mypy_command = "mypy"
 
+extra_args = ["--fast-parser", "--silent-imports", "--py2", "--check-untyped-defs"]
+if args.linecoverage_report:
+    extra_args.append("--linecoverage-report")
+    extra_args.append("linecoverage-report")
+if args.disallow_untyped_defs:
+    extra_args.append("--disallow-untyped-defs")
+
+
 # run mypy
 if python_files:
-    rc = subprocess.call([mypy_command, "--fast-parser", "--silent-imports", "--py2", "--check-untyped-defs"] + python_files)
+    rc = subprocess.call([mypy_command] + extra_args + python_files)
+    if args.linecoverage_report:
+        # Move the coverage report to where coveralls will look for it.
+        try:
+            os.rename('linecoverage-report/coverage.txt', '.coverage')
+        except OSError:
+            # maybe mypy crashed; exit with its error code
+            pass
     sys.exit(rc)
 else:
     print("There are no files to run mypy on.")

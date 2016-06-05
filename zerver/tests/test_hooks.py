@@ -1181,3 +1181,63 @@ class CircleCiHookTests(WebhookTestCase):
         expected_subject = u"RepoName"
         expected_message = u"[Build](https://circleci.com/gh/username/project/build_number) triggered by username on master branch fixed."
         self.send_and_test_stream_message('build_passed_when_previous_build_failed', expected_subject, expected_message)
+
+class TransifexHookTests(WebhookTestCase):
+    STREAM_NAME = 'transifex'
+    URL_TEMPLATE = "/api/v1/external/transifex?stream={stream}&api_key={api_key}&{data_template}"
+    URL_DATA_TEMPLATE = "project={project}&language={language}&resource={resource}&{method}"
+    URL_REVIEWED_METHOD_TEMPLATE = "reviewed=100"
+    URL_TRANSLATED_METHOD_TEMPLATE = "translated=100"
+    FIXTURE_DIR_NAME = 'transifex'
+
+    PROJECT = 'project-title'
+    LANGUAGE = 'en'
+    RESOURCE = 'file'
+    REVIEWED = True
+
+    def test_transifex_reviewed_message(self):
+        self.REVIEWED = True
+        expected_subject = "{} in {}".format(self.PROJECT, self.LANGUAGE)
+        expected_message = "Resource {} fully reviewed.".format(self.RESOURCE)
+        self.url = self.build_webhook_url()
+        self.send_and_test_stream_message(None, expected_subject, expected_message)
+
+    def test_transifex_translated_message(self):
+        self.REVIEWED = False
+        expected_subject = "{} in {}".format(self.PROJECT, self.LANGUAGE)
+        expected_message = "Resource {} fully translated.".format(self.RESOURCE)
+        self.url = self.build_webhook_url()
+        self.send_and_test_stream_message(None, expected_subject, expected_message)
+        self.REVIEWED = True
+
+    def build_webhook_url(self):
+        url_data = self.URL_DATA_TEMPLATE.format(
+            project=self.PROJECT,
+            language=self.LANGUAGE,
+            resource=self.RESOURCE,
+            method=self.URL_REVIEWED_METHOD_TEMPLATE if self.REVIEWED else self.URL_TRANSLATED_METHOD_TEMPLATE
+        )
+        api_key = self.get_api_key(self.TEST_USER_EMAIL)
+        return self.URL_TEMPLATE.format(api_key=api_key, stream=self.STREAM_NAME, data_template=url_data)
+
+    def get_body(self, fixture_name):
+        return {}
+
+class CrashlyticsHookTests(WebhookTestCase):
+    STREAM_NAME = 'crashlytics'
+    URL_TEMPLATE = "/api/v1/external/crashlytics?stream={stream}&api_key={api_key}"
+    FIXTURE_DIR_NAME = 'crashlytics'
+
+    def test_crashlytics_verification_message(self):
+        last_message_before_request = self.get_last_message()
+        payload = self.get_body('verification')
+        url = self.build_webhook_url()
+        result = self.client.post(url, payload, content_type="application/json")
+        last_message_after_request = self.get_last_message()
+        self.assert_json_success(result)
+        self.assertEqual(last_message_after_request.pk, last_message_before_request.pk)
+
+    def test_crashlytics_build_in_success_status(self):
+        expected_subject = u"123: Issue Title"
+        expected_message = u"[Issue](http://crashlytics.com/full/url/to/issue) impacts at least 16 device(s)."
+        self.send_and_test_stream_message('issue_message', expected_subject, expected_message)

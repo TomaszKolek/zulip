@@ -1,11 +1,14 @@
 from __future__ import absolute_import
 
+from typing import Any, Dict
+
+from django.utils.translation import ugettext as _
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
 
 from zerver.decorator import authenticated_json_view, authenticated_rest_api_view, \
         process_as_post, JsonableError
 from zerver.lib.response import json_method_not_allowed, json_unauthorized, json_unhandled_exception
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.conf import settings
 
 import logging
@@ -15,6 +18,7 @@ METHODS = ('GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'PATCH')
 
 @csrf_exempt
 def rest_dispatch(request, globals_list, **kwargs):
+    # type: (HttpRequest, Dict[str, Any], **Any) -> HttpResponse
     """Dispatch to a REST API endpoint.
 
     This calls the function named in kwargs[request.method], if that request
@@ -33,7 +37,7 @@ def rest_dispatch(request, globals_list, **kwargs):
     make a urls.py pattern put user input into a variable called GET, POST,
     etc.
     """
-    supported_methods = {}
+    supported_methods = {} # type: Dict[str, Any]
     # duplicate kwargs so we can mutate the original as we go
     for arg in list(kwargs):
         if arg in METHODS:
@@ -80,7 +84,7 @@ def rest_dispatch(request, globals_list, **kwargs):
                 # browser, send the user to the login page
                 return HttpResponseRedirect('%s/?next=%s' % (settings.HOME_NOT_LOGGED_IN, request.path))
             else:
-                return json_unauthorized("Not logged in: API authentication or user session required")
+                return json_unauthorized(_("Not logged in: API authentication or user session required"))
 
         if request.method not in ["GET", "POST"]:
             # process_as_post needs to be the outer decorator, because
@@ -91,5 +95,3 @@ def rest_dispatch(request, globals_list, **kwargs):
         return target_function(request, **kwargs)
 
     return json_method_not_allowed(list(supported_methods.keys()))
-
-
