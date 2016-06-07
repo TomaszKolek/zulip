@@ -860,9 +860,14 @@ def extract_recipients(s):
 
 # check_send_message:
 # Returns the id of the sent message.  Has same argspec as check_message.
-def check_send_message(*args, **kwargs):
-    # type: (*Any, **Any) -> int # TODO: Impose same argspec as check_message.
-    message = check_message(*args, **kwargs)
+def check_send_message(sender, client, message_type_name, message_to,
+                       subject_name, message_content, realm=None, forged=False,
+                       forged_timestamp=None, forwarder_user_profile=None, local_id=None,
+                       sender_queue_id=None):
+    # type: (UserProfile, Client, str, List[text_type], text_type, text_type, Optional[Realm], bool, Optional[float], Optional[UserProfile], Optional[int], Optional[text_type]) -> int
+    message = check_message(sender, client, message_type_name, message_to,
+                            subject_name, message_content, realm, forged, forged_timestamp,
+                            forwarder_user_profile, local_id, sender_queue_id)
     return do_send_messages([message])[0]
 
 def check_stream_name(stream_name):
@@ -922,7 +927,7 @@ def check_message(sender, client, message_type_name, message_to,
                   subject_name, message_content, realm=None, forged=False,
                   forged_timestamp=None, forwarder_user_profile=None, local_id=None,
                   sender_queue_id=None):
-    # type: (UserProfile, Client, str, Optional[List[text_type]], text_type, text_type, Optional[Realm], bool, Optional[float], Optional[UserProfile], Optional[int], Optional[text_type]) -> Dict[str, Any]
+    # type: (UserProfile, Client, str, List[text_type], text_type, text_type, Optional[Realm], bool, Optional[float], Optional[UserProfile], Optional[int], Optional[text_type]) -> Dict[str, Any]
     stream = None
     if not message_to and message_type_name == 'stream' and sender.default_sending_stream:
         # Use the users default stream
@@ -2842,7 +2847,7 @@ def apply_events(state, events, user_profile):
 def do_events_register(user_profile, user_client, apply_markdown=True,
                        event_types=None, queue_lifespan_secs=0, all_public_streams=False,
                        narrow=[]):
-    # type: (UserProfile, Client, bool, Optional[Iterable[str]], int, bool, Iterable[Sequence[str]]) -> Dict[str, Any]
+    # type: (UserProfile, Client, bool, Optional[Iterable[str]], int, bool, Iterable[Sequence[text_type]]) -> Dict[str, Any]
     # Technically we don't need to check this here because
     # build_narrow_filter will check it, but it's nicer from an error
     # handling perspective to do it before contacting Tornado
@@ -3113,7 +3118,7 @@ def do_set_alert_words(user_profile, alert_words):
     notify_alert_words(user_profile, alert_words)
 
 def do_set_muted_topics(user_profile, muted_topics):
-    # type: (UserProfile, List[Union[List[text_type], Tuple[text_type, text_type]]]) -> None
+    # type: (UserProfile, Union[List[List[text_type]], List[Tuple[text_type, text_type]]]) -> None
     user_profile.muted_topics = ujson.dumps(muted_topics)
     user_profile.save(update_fields=['muted_topics'])
     event = dict(type="muted_topics", muted_topics=muted_topics)
@@ -3192,16 +3197,7 @@ def do_get_streams(user_profile, include_public=True, include_subscribed=True,
             # We're including nothing, so don't bother hitting the DB.
             query = []
 
-    def make_dict(row):
-        # type: (Stream) -> Dict[str, Any]
-        return dict(
-            stream_id = row.id,
-            name = row.name,
-            description = row.description,
-            invite_only = row.invite_only,
-        )
-
-    streams = [make_dict(row) for row in query]
+    streams = [(row.to_dict()) for row in query]
     streams.sort(key=lambda elt: elt["name"])
 
     return streams
