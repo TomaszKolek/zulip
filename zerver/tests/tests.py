@@ -960,6 +960,23 @@ class ChangeSettingsTest(AuthedTestCase):
     def check_well_formed_change_settings_response(self, result):
         self.assertIn("full_name", result)
 
+    def check_for_toggle_param(self, pattern, param):
+        self.login("hamlet@zulip.com")
+        user_profile = get_user_profile_by_email("hamlet@zulip.com")
+        json_result = self.client.post(pattern,
+                                       {param: ujson.dumps(True)})
+        self.assert_json_success(json_result)
+        # refetch user_profile object to correctly handle caching
+        user_profile = get_user_profile_by_email("hamlet@zulip.com")
+        self.assertEqual(getattr(user_profile, param), True)
+
+        json_result = self.client.post(pattern,
+                                       {param: ujson.dumps(False)})
+        self.assert_json_success(json_result)
+        # refetch user_profile object to correctly handle caching
+        user_profile = get_user_profile_by_email("hamlet@zulip.com")
+        self.assertEqual(getattr(user_profile, param), False)
+
     def test_successful_change_settings(self):
         """
         A call to /json/settings/change with valid parameters changes the user's
@@ -977,41 +994,28 @@ class ChangeSettingsTest(AuthedTestCase):
         user_profile = get_user_profile_by_email('hamlet@zulip.com')
         self.assertEqual(get_session_dict_user(self.client.session), user_profile.id)
 
+    # This is basically a don't-explode test.
     def test_notify_settings(self):
-        # This is basically a don't-explode test.
-        self.login("hamlet@zulip.com")
-        json_result = self.client.post("/json/notify_settings/change",
-                                       {"enable_desktop_notifications": ujson.dumps(False)})
-        self.assert_json_success(json_result)
-        self.assertEqual(get_user_profile_by_email("hamlet@zulip.com").
-                enable_desktop_notifications, False)
+        self.check_for_toggle_param("/json/notify_settings/change", "enable_desktop_notifications")
+        self.check_for_toggle_param("/json/notify_settings/change", "enable_stream_desktop_notifications")
+        self.check_for_toggle_param("/json/notify_settings/change", "enable_stream_sounds")
+        self.check_for_toggle_param("/json/notify_settings/change", "enable_sounds")
+        self.check_for_toggle_param("/json/notify_settings/change", "enable_offline_email_notifications")
+        self.check_for_toggle_param("/json/notify_settings/change", "enable_offline_push_notifications")
+        self.check_for_toggle_param("/json/notify_settings/change", "enable_digest_emails")
 
     def test_ui_settings(self):
-        self.login("hamlet@zulip.com")
+        self.check_for_toggle_param("/json/ui_settings/change", "autoscroll_forever")
+        self.check_for_toggle_param("/json/ui_settings/change", "default_desktop_notifications")
 
-        json_result = self.client.post("/json/ui_settings/change",
-                                       {"autoscroll_forever": ujson.dumps(True)})
-        self.assert_json_success(json_result)
-        self.assertEqual(get_user_profile_by_email("hamlet@zulip.com").
-                enable_desktop_notifications, True)
+    def test_toggling_left_side_userlist(self):
+        self.check_for_toggle_param("/json/left_side_userlist", "left_side_userlist")
 
-        json_result = self.client.post("/json/ui_settings/change",
-                                       {"autoscroll_forever": ujson.dumps(False)})
-        self.assert_json_success(json_result)
-        self.assertEqual(get_user_profile_by_email("hamlet@zulip.com").
-                         autoscroll_forever, False)
+    def test_time_setting(self):
+        self.check_for_toggle_param("/json/time_setting", "twenty_four_hour_time")
 
-        json_result = self.client.post("/json/ui_settings/change",
-                                       {"default_desktop_notifications": ujson.dumps(True)})
-        self.assert_json_success(json_result)
-        self.assertEqual(get_user_profile_by_email("hamlet@zulip.com").
-                default_desktop_notifications, True)
-
-        json_result = self.client.post("/json/ui_settings/change",
-                                       {"default_desktop_notifications": ujson.dumps(False)})
-        self.assert_json_success(json_result)
-        self.assertEqual(get_user_profile_by_email("hamlet@zulip.com").
-                default_desktop_notifications, False)
+    def test_enter_sends_setting(self):
+        self.check_for_toggle_param('/json/users/me/enter-sends', "enter_sends")
 
     def test_missing_params(self):
         """
