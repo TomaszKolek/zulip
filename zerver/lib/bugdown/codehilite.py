@@ -18,6 +18,10 @@ Dependencies:
 
 """
 
+from six import text_type
+from typing import Any, Dict, List, Optional, Tuple, Union
+from xml.etree.ElementTree import ElementTree
+
 import markdown
 try:
     from pygments import highlight
@@ -56,6 +60,7 @@ class CodeHilite(object):
     def __init__(self, src=None, force_linenos=None, guess_lang=True,
                 css_class="codehilite", lang=None, style='default',
                 noclasses=False, tab_length=4):
+        # type: (Optional[text_type], Optional[bool], bool, text_type, Optional[text_type], text_type, bool, int) -> None
         self.src = src
         self.lang = lang
         self.linenos = force_linenos
@@ -66,6 +71,7 @@ class CodeHilite(object):
         self.tab_length = tab_length
 
     def hilite(self):
+        # type: () -> text_type
         """
         Pass code to the [Pygments](http://pygments.pocoo.org/) highliter with
         optional line numbers. The output should then be styled with css to
@@ -115,6 +121,7 @@ class CodeHilite(object):
                         (self.css_class, class_str, txt)
 
     def _getLang(self):
+        # type: () -> None
         """
         Determines language of a code block from shebang line and whether said
         line should be removed or left in place. If the sheband line contains a
@@ -136,10 +143,10 @@ class CodeHilite(object):
         # pull first line to examine
         fl = lines.pop(0)
 
-        c = re.compile(r'''
+        c = re.compile(u'''
             (?:(?:^::+)|(?P<shebang>^[#]!))	# Shebang or 2 or more colons.
-            (?P<path>(?:/\w+)*[/ ])?        # Zero or 1 path
-            (?P<lang>[\w+-]*)               # The language
+            (?P<path>(?:/\\w+)*[/ ])?        # Zero or 1 path
+            (?P<lang>[\\w+-]*)               # The language
             ''',  re.VERBOSE)
         # search first line for shebang
         m = c.search(fl)
@@ -168,6 +175,7 @@ class HiliteTreeprocessor(markdown.treeprocessors.Treeprocessor):
     """ Hilight source code in code blocks. """
 
     def run(self, root):
+        # type: (ElementTree) -> None
         """ Find code blocks and store in htmlStash. """
         blocks = root.getiterator('pre')
         for block in blocks:
@@ -194,6 +202,7 @@ class CodeHiliteExtension(markdown.Extension):
     """ Add source code hilighting to markdown codeblocks. """
 
     def __init__(self, configs):
+        # type: (List[Tuple[str, Union[bool, None, text_type]]]) -> None
         # define default configs
         self.config = {
             'force_linenos' : [None, "Force line numbers - Default: detect based on shebang"],
@@ -202,7 +211,7 @@ class CodeHiliteExtension(markdown.Extension):
                            "Set class name for wrapper <div> - Default: codehilite"],
             'pygments_style' : ['default', 'Pygments HTML Formatter Style (Colorscheme) - Default: default'],
             'noclasses': [False, 'Use inline styles instead of CSS classes - Default false']
-            }
+            } # type: Dict[str, List[Any]]
 
         # Override defaults with user settings
         for key, value in configs:
@@ -212,6 +221,7 @@ class CodeHiliteExtension(markdown.Extension):
             self.setConfig(key, value)
 
     def extendMarkdown(self, md, md_globals):
+        # type: (markdown.Markdown, Dict[str, Any]) -> None
         """ Add HilitePostprocessor to Markdown instance. """
         hiliter = HiliteTreeprocessor(md)
         hiliter.config = self.getConfigs()
@@ -221,5 +231,5 @@ class CodeHiliteExtension(markdown.Extension):
 
 
 def makeExtension(configs=None):
-  return CodeHiliteExtension(configs=configs or [])
-
+    # type: (Optional[List[Tuple[str, Union[bool, None, text_type]]]]) -> CodeHiliteExtension
+    return CodeHiliteExtension(configs=configs or [])

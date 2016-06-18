@@ -68,6 +68,9 @@ i18n_urls = [
     # Portico-styled page used to provide email confirmation of terms acceptance.
     url(r'^accounts/accept_terms/$', 'zerver.views.accounts_accept_terms'),
 
+    # Realm Creation
+    url(r'^create_realm/$', 'zerver.views.create_realm'),
+
     # Login/registration
     url(r'^register/$', 'zerver.views.accounts_home', name='register'),
     url(r'^login/$',  'zerver.views.login_page', {'template_name': 'zerver/login.html'}),
@@ -140,11 +143,16 @@ urlpatterns += patterns('zerver.views',
     # password/pair and returns an API key.
     url(r'^api/v1/fetch_api_key$',          'api_fetch_api_key'),
 
+    # This is for the signing in through the devAuthBackEnd on mobile apps.
+    url(r'^api/v1/dev_fetch_api_key$',      'api_dev_fetch_api_key'),
+    # This is for fetching the emails of the admins and the users.
+    url(r'^api/v1/dev_get_emails$',         'api_dev_get_emails'),
+
     # Used to present the GOOGLE_CLIENT_ID to mobile apps
     url(r'^api/v1/fetch_google_client_id$', 'api_fetch_google_client_id'),
 
     # Sorted integration-specific webhook callbacks.
-    url(r'^api/v1/external/airbrake$',       'webhooks.airbrake.api_airbrake_webhook'),
+    url(r'^api/v1/external/airbrake$',      'webhooks.airbrake.api_airbrake_webhook'),
     url(r'^api/v1/external/beanstalk$',     'webhooks.beanstalk.api_beanstalk_webhook'),
     url(r'^api/v1/external/bitbucket$',     'webhooks.bitbucket.api_bitbucket_webhook'),
     url(r'^api/v1/external/circleci$',      'webhooks.circleci.api_circleci_webhook'),
@@ -153,6 +161,7 @@ urlpatterns += patterns('zerver.views',
     url(r'^api/v1/external/desk$',          'webhooks.deskdotcom.api_deskdotcom_webhook'),
     url(r'^api/v1/external/freshdesk$',     'webhooks.freshdesk.api_freshdesk_webhook'),
     url(r'^api/v1/external/github$',        'webhooks.github.api_github_landing'),
+    url(r'^api/v1/external/ifttt$',         'webhooks.ifttt.api_iftt_app_webhook'),
     url(r'^api/v1/external/jira$',          'webhooks.jira.api_jira_webhook'),
     url(r'^api/v1/external/newrelic$',      'webhooks.newrelic.api_newrelic_webhook'),
     url(r'^api/v1/external/pagerduty$',     'webhooks.pagerduty.api_pagerduty_webhook'),

@@ -40,6 +40,7 @@ zerver/migrations
 node_modules
 docs/html_unescape.py
 zproject/test_settings.py
+zproject/dev_settings.py
 zproject/settings.py
 tools/jslint/jslint.js
 api/setup.py
@@ -95,6 +96,8 @@ def custom_check_file(fn, rules, skip_rules=None):
     failed = False
     lineFlag = False
     for i, line in enumerate(open(fn)):
+        line_newline_stripped = line.strip('\n')
+        line_fully_stripped = line_newline_stripped.strip()
         skip = False
         lineFlag = True
         for rule in skip_rules or []:
@@ -107,10 +110,16 @@ def custom_check_file(fn, rules, skip_rules=None):
             if fn in exclude_list:
                 continue
             exclude_list = rule.get('exclude_line', set())
-            if (fn, line.strip()) in exclude_list:
+            if (fn, line_fully_stripped) in exclude_list:
                 continue
             try:
-                if re.search(rule['pattern'], line.strip(rule.get('strip', None))):
+                line_to_check = line_fully_stripped
+                if rule.get('strip') is not None:
+                    if rule['strip'] == '\n':
+                        line_to_check = line_newline_stripped
+                    else:
+                        raise Exception("Invalid strip rule")
+                if re.search(rule['pattern'], line_to_check):
                     sys.stdout.write(rule['description'] + ' at %s line %s:\n' % (fn, i+1))
                     print(line)
                     failed = True
@@ -241,6 +250,8 @@ python_rules = [
          ('zerver/lib/request.py', 'raise JsonableError(error)'),
      ]),
      'description': 'Argument to JsonableError should be a literal string enclosed by _()'},
+    {'pattern': '([a-zA-Z0-9_]+)=REQ\([\'"]\\1[\'"]',
+     'description': 'REQ\'s first argument already defaults to parameter name'},
     ] + whitespace_rules
 bash_rules = [
     {'pattern': '#!.*sh [-xe]',
@@ -263,12 +274,16 @@ json_rules = [] # just fix newlines at ends of files
 markdown_rules = whitespace_rules
 txt_rules = whitespace_rules
 
-def check_custom_checks():
+def check_custom_checks_py():
     failed = False
 
     for fn in by_lang['py']:
         if custom_check_file(fn, python_rules):
             failed = True
+    return failed
+
+def check_custom_checks_nonpy():
+    failed = False
 
     for fn in by_lang['js']:
         if custom_check_file(fn, js_rules):
@@ -352,8 +367,13 @@ try:
         return result
 
     @lint
-    def custom():
-        failed = check_custom_checks()
+    def custom_py():
+        failed = check_custom_checks_py()
+        return 1 if failed else 0
+
+    @lint
+    def custom_nonpy():
+        failed = check_custom_checks_nonpy()
         return 1 if failed else 0
 
     @lint
