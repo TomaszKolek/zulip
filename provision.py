@@ -158,7 +158,7 @@ def setup_virtualenv(target_venv_path, requirements_file, virtualenv_args=None):
     # type: (str, str, List[str]) -> None
 
     # Check if a cached version already exists
-    output = subprocess.check_output(['sha1sum', requirements_file])
+    output = subprocess.check_output([os.path.join('tools', 'hash_reqs.py'), requirements_file])
     sha1sum = output.split()[0]
     cached_venv_path = os.path.join(VENV_CACHE_PATH, sha1sum, os.path.basename(target_venv_path))
     success_stamp = os.path.join(cached_venv_path, "success-stamp")
@@ -200,7 +200,7 @@ def main():
     setup_virtualenv(PY3_VENV_PATH,
                      os.path.join(ZULIP_PATH, "requirements", "mypy.txt"),
                      virtualenv_args=['-p', 'python3'])
-    setup_virtualenv(VENV_PATH, os.path.join(ZULIP_PATH, "requirements.txt"))
+    setup_virtualenv(VENV_PATH, os.path.join(ZULIP_PATH, "requirements", "dev.txt"))
 
     # Put Python2 virtualenv activation in our .bash_profile.
     with open(os.path.expanduser('~/.bash_profile'), 'w+') as bash_profile:
