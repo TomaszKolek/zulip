@@ -323,8 +323,8 @@ function _setup_page() {
 
     function post_notify_settings_changes(notification_changes, success_func,
                                           error_func) {
-        return channel.post({
-            url: "/json/notify_settings/change",
+        return channel.patch({
+            url: "/json/settings/notifications",
             data: notification_changes,
             success: success_func,
             error: error_func
@@ -351,8 +351,8 @@ function _setup_page() {
     function update_global_stream_setting(notification_type, new_setting) {
         var data = {};
         data[notification_type] = new_setting;
-        channel.post({
-            url: "/json/notify_settings/change",
+        channel.patch({
+            url: "/json/settings/notifications",
             data: data,
             success: update_notification_settings_success,
             error: update_notification_settings_error
@@ -408,7 +408,7 @@ function _setup_page() {
         }
 
         channel.patch({
-            url: '/json/left_side_userlist',
+            url: '/json/settings/display',
             data: data,
             success: function () {
                 ui.report_success(i18n.t("User list will appear on the __side__ hand side! You will need to reload the window for your changes to take effect.", context),
@@ -432,7 +432,7 @@ function _setup_page() {
         }
 
         channel.patch({
-            url: '/json/time_setting',
+            url: '/json/settings/display',
             data: data,
             success: function () {
                 ui.report_success(i18n.t("Time will be displayed in the __format__-hour format!  You will need to reload the window for your changes to take effect", context),
@@ -769,8 +769,8 @@ function _setup_page() {
                 labs_updates[setting] = $("#" + setting).is(":checked");
         });
 
-        channel.post({
-            url: '/json/ui_settings/change',
+        channel.patch({
+            url: '/json/settings/ui',
             data: labs_updates,
             success: function (resp, statusText, xhr) {
                 var message = i18n.t("Updated __product_name__ Labs settings!  You will need to reload for these changes to take effect.", page_params);

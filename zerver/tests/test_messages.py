@@ -31,7 +31,7 @@ from zerver.lib.test_classes import (
 from zerver.models import (
     MAX_MESSAGE_LENGTH, MAX_SUBJECT_LENGTH,
     Message, Realm, Recipient, Stream, UserMessage, UserProfile, Attachment, RealmAlias,
-    get_realm_by_string_id, get_realm, get_stream, get_user_profile_by_email,
+    get_realm_by_string_id, get_stream, get_user_profile_by_email,
     Reaction, sew_messages_and_reactions
 )
 
@@ -383,7 +383,7 @@ class StreamMessagesTest(ZulipTestCase):
         """
         Check that messages sent to a stream reach all subscribers to that stream.
         """
-        realm = get_realm('zulip.com')
+        realm = get_realm_by_string_id('zulip')
         subscribers = self.users_subscribed_to_stream(stream_name, realm)
         old_subscriber_messages = []
         for subscriber in subscribers:
@@ -985,14 +985,14 @@ class EditMessageTest(ZulipTestCase):
         self.login("hamlet@zulip.com")
         msg_id = self.send_message("hamlet@zulip.com", "Scotland", Recipient.STREAM,
                                    subject="editing", content="before edit")
-        result = self.client_post("/json/update_message", {
+        result = self.client_patch("/json/messages/" + str(msg_id), {
             'message_id': msg_id,
             'content': 'after edit'
         })
         self.assert_json_success(result)
         self.check_message(msg_id, content="after edit")
 
-        result = self.client_post("/json/update_message", {
+        result = self.client_patch("/json/messages/" + str(msg_id), {
             'message_id': msg_id,
             'subject': 'edited'
         })
@@ -1055,7 +1055,7 @@ class EditMessageTest(ZulipTestCase):
         self.login("hamlet@zulip.com")
         msg_id = self.send_message("hamlet@zulip.com", "Scotland", Recipient.STREAM,
                                    subject="editing", content="before edit")
-        result = self.client_post("/json/update_message", {
+        result = self.client_patch("/json/messages/" + str(msg_id), {
             'message_id': msg_id,
         })
         self.assert_json_error(result, "Nothing to change")
@@ -1065,7 +1065,7 @@ class EditMessageTest(ZulipTestCase):
         self.login("hamlet@zulip.com")
         msg_id = self.send_message("hamlet@zulip.com", "Scotland", Recipient.STREAM,
                                    subject="editing", content="before edit")
-        result = self.client_post("/json/update_message", {
+        result = self.client_patch("/json/messages/" + str(msg_id), {
             'message_id': msg_id,
             'subject': ' '
         })
@@ -1076,7 +1076,7 @@ class EditMessageTest(ZulipTestCase):
         self.login("hamlet@zulip.com")
         msg_id = self.send_message("hamlet@zulip.com", "Scotland", Recipient.STREAM,
                                    subject="editing", content="before edit")
-        result = self.client_post("/json/update_message", {
+        result = self.client_patch("/json/messages/" + str(msg_id), {
             'message_id': msg_id,
             'content': ' '
         })
@@ -1102,7 +1102,7 @@ class EditMessageTest(ZulipTestCase):
             params_dict = {'message_id': id_, 'subject': new_subject}
             if not topic_only:
                 params_dict['content'] = new_content
-            result = self.client_post("/json/update_message", params_dict)
+            result = self.client_patch("/json/messages/" + str(id_), params_dict)
             self.assert_json_success(result)
             if topic_only:
                 self.check_message(id_, subject=new_subject)
@@ -1119,7 +1119,7 @@ class EditMessageTest(ZulipTestCase):
             params_dict = {'message_id': id_, 'subject': new_subject}
             if not topic_only:
                 params_dict['content'] = new_content
-            result = self.client_post("/json/update_message", params_dict)
+            result = self.client_patch("/json/messages/" + str(id_), params_dict)
             message = Message.objects.get(id=id_)
             self.assert_json_error(result, error)
             self.check_message(id_, subject=old_subject, content=old_content)
@@ -1168,7 +1168,7 @@ class EditMessageTest(ZulipTestCase):
         id5 = self.send_message("iago@zulip.com", "Scotland", Recipient.STREAM,
                                 subject="topic1")
 
-        result = self.client_post("/json/update_message", {
+        result = self.client_patch("/json/messages/" + str(id1), {
             'message_id': id1,
             'subject': 'edited',
             'propagate_mode': 'change_later'
@@ -1197,7 +1197,7 @@ class EditMessageTest(ZulipTestCase):
         id6 = self.send_message("iago@zulip.com", "Scotland", Recipient.STREAM,
                                 subject="topic3")
 
-        result = self.client_post("/json/update_message", {
+        result = self.client_patch("/json/messages/" + str(id2), {
             'message_id': id2,
             'subject': 'edited',
             'propagate_mode': 'change_all'

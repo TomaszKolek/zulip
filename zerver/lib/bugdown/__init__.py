@@ -42,7 +42,7 @@ import zerver.lib.mention as mention
 from zerver.lib.str_utils import force_text, force_str
 import six
 from six.moves import range, html_parser
-from six import text_type
+from typing import Text
 
 if six.PY3:
     import html
@@ -57,7 +57,7 @@ _T = TypeVar('_T')
 # which means that at runtime Union causes this to blow up.
 if False:
     # mypy requires the Optional to be inside Union
-    ElementStringNone = Union[Element, Optional[text_type]]
+    ElementStringNone = Union[Element, Optional[Text]]
 
 class BugdownRenderingException(Exception):
     pass
@@ -128,7 +128,7 @@ def add_a(root, url, link, height="", title=None, desc=None,
 
 
 def add_embed(root, link, extracted_data):
-    # type: (Element, text_type, Dict[text_type, Any]) -> None
+    # type: (Element, Text, Dict[Text, Any]) -> None
     container = markdown.util.etree.SubElement(root, "div")
     container.set("class", "message_embed")
 
@@ -630,7 +630,7 @@ class Avatar(markdown.inlinepatterns.Pattern):
         img.set('alt', email_address)
         return img
 
-emoji_tree = os.path.join(settings.STATIC_ROOT, "third", "gemoji", "images", "emoji")
+emoji_tree = os.path.join(settings.STATIC_ROOT, "generated", "emoji", "images", "emoji")
 path_to_emoji = os.path.join(emoji_tree, '*.png')
 path_to_unicode_emoji = os.path.join(emoji_tree, 'unicode', '*.png')
 
@@ -653,7 +653,7 @@ class UnicodeEmoji(markdown.inlinepatterns.Pattern):
         orig_syntax = match.group('syntax')
         name = hex(ord(orig_syntax))[2:]
         if name in unicode_emoji_list:
-            src = '/static/third/gemoji/images/emoji/unicode/%s.png' % (name)
+            src = '/static/generated/emoji/images/emoji/unicode/%s.png' % (name)
             return make_emoji(name, src, orig_syntax)
         else:
             return None
@@ -671,7 +671,7 @@ class Emoji(markdown.inlinepatterns.Pattern):
         if current_message and name in realm_emoji:
             return make_emoji(name, realm_emoji[name]['display_url'], orig_syntax)
         elif name in emoji_list:
-            src = '/static/third/gemoji/images/emoji/%s.png' % (name)
+            src = '/static/generated/emoji/images/emoji/%s.png' % (name)
             return make_emoji(name, src, orig_syntax)
         else:
             return None

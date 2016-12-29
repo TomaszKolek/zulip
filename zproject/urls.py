@@ -115,7 +115,7 @@ i18n_urls = [
     url(r'^login/$',  zerver.views.auth.login_page, {'template_name': 'zerver/login.html'}, name='zerver.views.auth.login_page'),
 
     # A registration page that passes through the domain, for totally open realms.
-    url(r'^register/(?P<domain>\S+)/$', zerver.views.accounts_home_with_domain, name='zerver.views.accounts_home_with_domain'),
+    url(r'^register/(?P<realm_str>\S+)/$', zerver.views.accounts_home_with_realm_str, name='zerver.views.accounts_home_with_realm_str'),
 
     # API and integrations documentation
     url(r'^api/$', APIView.as_view(template_name='zerver/api.html')),
@@ -197,7 +197,8 @@ v1_api_and_json_patterns = [
          'PATCH': 'zerver.views.messages.update_message_backend',
          'POST': 'zerver.views.messages.send_message_backend'}),
     url(r'^messages/(?P<message_id>[0-9]+)$', rest_dispatch,
-        {'GET': 'zerver.views.messages.json_fetch_raw_message'}),
+        {'GET': 'zerver.views.messages.json_fetch_raw_message',
+         'PATCH': 'zerver.views.messages.json_update_message'}),
     url(r'^messages/render$', rest_dispatch,
         {'GET': 'zerver.views.messages.render_message_backend'}),
     url(r'^messages/flags$', rest_dispatch,
@@ -246,8 +247,14 @@ v1_api_and_json_patterns = [
     url(r'^users/me/avatar$', rest_dispatch,
         {'PUT': 'zerver.views.user_settings.set_avatar_backend',
          'DELETE': 'zerver.views.user_settings.delete_avatar_backend'}),
+
+    # settings -> zerver.views.user_settings
     url(r'^settings/display$', rest_dispatch,
         {'PATCH': 'zerver.views.user_settings.update_display_settings_backend'}),
+    url(r'^settings/notifications$', rest_dispatch,
+        {'PATCH': 'zerver.views.user_settings.json_change_notify_settings'}),
+    url(r'^settings/ui$', rest_dispatch,
+        {'PATCH': 'zerver.views.user_settings.json_change_ui_settings'}),
 
     # users/me/alert_words -> zerver.views.alert_words
     url(r'^users/me/alert_words$', rest_dispatch,
@@ -280,7 +287,8 @@ v1_api_and_json_patterns = [
     url(r'^users/me/subscriptions$', rest_dispatch,
         {'GET': 'zerver.views.streams.list_subscriptions_backend',
          'POST': 'zerver.views.streams.add_subscriptions_backend',
-         'PATCH': 'zerver.views.streams.update_subscriptions_backend'}),
+         'PATCH': 'zerver.views.streams.update_subscriptions_backend',
+         'DELETE': 'zerver.views.streams.remove_subscriptions_backend'}),
 
     # used to register for an event queue in tornado
     url(r'^register$', rest_dispatch,

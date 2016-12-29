@@ -486,28 +486,32 @@ function remove_temporarily_miscategorized_streams() {
 
 exports.remove_miscategorized_streams = remove_temporarily_miscategorized_streams;
 
-// query is now an object rather than a string.
-// Query { input: String, subscribed_only: Boolean }
-exports.filter_table = function (query) {
+function stream_matches_query(query, sub) {
     var search_terms = query.input.toLowerCase().split(",").map(function (s) {
         return s.trim();
     });
 
+    var flag = true;
+    flag = flag && (function () {
+        var sub_name = sub.name.toLowerCase();
+        var matches_list = search_terms.indexOf(sub_name) > -1;
+        var matches_last_val = sub_name.match(search_terms[search_terms.length - 1]);
+
+        return matches_list || matches_last_val;
+    }());
+    flag = flag && ((sub.subscribed || !query.subscribed_only) ||
+                    sub.data_temp_view === "true");
+    return flag;
+}
+
+// query is now an object rather than a string.
+// Query { input: String, subscribed_only: Boolean }
+exports.filter_table = function (query) {
     _.each($("#subscriptions_table .stream-row"), function (row) {
         var sub = stream_data.get_sub_by_id($(row).attr("data-stream-id"));
-        var flag = true;
+        sub.data_temp_view = $(row).attr("data-temp-view");
 
-        flag = flag && (function () {
-            var sub_name = sub.name.toLowerCase();
-            var matches_list = search_terms.indexOf(sub_name) > -1;
-            var matches_last_val = sub_name.match(search_terms[search_terms.length - 1]);
-
-            return matches_list || matches_last_val;
-        }());
-        flag = flag && ((sub.subscribed || !query.subscribed_only) ||
-                        $(row).attr("data-temp-view") === "true");
-
-        if (flag) {
+        if (stream_matches_query(query, sub)) {
             $(row).removeClass("notdisplayed");
         } else {
             $(row).addClass("notdisplayed");
@@ -702,8 +706,8 @@ function ajaxSubscribe(stream) {
 }
 
 function ajaxUnsubscribe(stream) {
-    return channel.post({
-        url: "/json/subscriptions/remove",
+    return channel.del({
+        url: "/json/users/me/subscriptions",
         data: {subscriptions: JSON.stringify([stream]) },
         success: function () {
             $("#subscriptions-status").hide();
@@ -785,8 +789,8 @@ exports.invite_user_to_stream = function (user_email, stream_name, success, fail
 };
 
 exports.remove_user_from_stream = function (user_email, stream_name, success, failure) {
-    return channel.post({
-        url: "/json/subscriptions/remove",
+    return channel.del({
+        url: "/json/users/me/subscriptions",
         data: {subscriptions: JSON.stringify([stream_name]),
                principals: JSON.stringify([user_email])},
         success: success,
@@ -1270,17 +1274,17 @@ $(function () {
         stream_list.redraw_stream_privacy(sub.name);
     }
 
-    function change_stream_privacy(e, url, success_message, error_message, invite_only) {
+    function change_stream_privacy(e, is_private, success_message, error_message, invite_only) {
         e.preventDefault();
 
         var stream_id = $(e.target).closest(".subscription_settings").attr("data-stream-id");
         var sub = stream_data.get_sub_by_id(stream_id);
 
         $("#subscriptions-status").hide();
-        var data = {stream_name: sub.name};
+        var data = {stream_name: sub.name, is_private: is_private};
 
-        channel.post({
-            url: url,
+        channel.patch({
+            url: "/json/streams/" + sub.name,
             data: data,
             success: function () {
                 sub = stream_data.get_sub_by_id(stream_id);
@@ -1302,7 +1306,7 @@ $(function () {
     $("#subscriptions_table").on("click", ".make-stream-public-button", function (e) {
         change_stream_privacy(
             e,
-            "/json/make_stream_public",
+            false,
             "The stream has been made public!",
             "Error making stream public",
             false
@@ -1312,7 +1316,7 @@ $(function () {
     $("#subscriptions_table").on("click", ".make-stream-private-button", function (e) {
         change_stream_privacy(
             e,
-            "/json/make_stream_private",
+            true,
             "The stream has been made private!",
             "Error making stream private",
             true

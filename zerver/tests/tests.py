@@ -189,6 +189,13 @@ class RealmTest(ZulipTestCase):
         realm = update_with_api(create_stream_by_admins_only=False)
         self.assertEqual(realm.create_stream_by_admins_only, False)
 
+        # add_emoji_by_admins_only
+        set_up_db('add_emoji_by_admins_only', False)
+        realm = update_with_api(add_emoji_by_admins_only=True)
+        self.assertEqual(realm.add_emoji_by_admins_only, True)
+        realm = update_with_api(add_emoji_by_admins_only=False)
+        self.assertEqual(realm.add_emoji_by_admins_only, False)
+
         # allow_message_editing
         set_up_db('allow_message_editing', False)
         set_up_db('message_content_edit_limit_seconds', 0)
@@ -1530,6 +1537,8 @@ class ChangeSettingsTest(ZulipTestCase):
         # type: (Dict[str, Any]) -> None
         self.assertIn("full_name", result)
 
+    # DEPRECATED, to be deleted after all uses of check_for_toggle_param
+    # are converted into check_for_toggle_param_patch.
     def check_for_toggle_param(self, pattern, param):
         # type: (str, str) -> None
         self.login("hamlet@zulip.com")
@@ -1543,6 +1552,26 @@ class ChangeSettingsTest(ZulipTestCase):
 
         json_result = self.client_post(pattern,
                                        {param: ujson.dumps(False)})
+        self.assert_json_success(json_result)
+        # refetch user_profile object to correctly handle caching
+        user_profile = get_user_profile_by_email("hamlet@zulip.com")
+        self.assertEqual(getattr(user_profile, param), False)
+
+    # TODO: requires method consolidation, right now, there's no alternative
+    # for check_for_toggle_param for PATCH.
+    def check_for_toggle_param_patch(self, pattern, param):
+        # type: (str, str) -> None
+        self.login("hamlet@zulip.com")
+        user_profile = get_user_profile_by_email("hamlet@zulip.com")
+        json_result = self.client_patch(pattern,
+                                        {param: ujson.dumps(True)})
+        self.assert_json_success(json_result)
+        # refetch user_profile object to correctly handle caching
+        user_profile = get_user_profile_by_email("hamlet@zulip.com")
+        self.assertEqual(getattr(user_profile, param), True)
+
+        json_result = self.client_patch(pattern,
+                                        {param: ujson.dumps(False)})
         self.assert_json_success(json_result)
         # refetch user_profile object to correctly handle caching
         user_profile = get_user_profile_by_email("hamlet@zulip.com")
@@ -1600,27 +1629,27 @@ class ChangeSettingsTest(ZulipTestCase):
     # This is basically a don't-explode test.
     def test_notify_settings(self):
         # type: () -> None
-        self.check_for_toggle_param("/json/notify_settings/change", "enable_desktop_notifications")
-        self.check_for_toggle_param("/json/notify_settings/change", "enable_stream_desktop_notifications")
-        self.check_for_toggle_param("/json/notify_settings/change", "enable_stream_sounds")
-        self.check_for_toggle_param("/json/notify_settings/change", "enable_sounds")
-        self.check_for_toggle_param("/json/notify_settings/change", "enable_offline_email_notifications")
-        self.check_for_toggle_param("/json/notify_settings/change", "enable_offline_push_notifications")
-        self.check_for_toggle_param("/json/notify_settings/change", "enable_online_push_notifications")
-        self.check_for_toggle_param("/json/notify_settings/change", "enable_digest_emails")
+        self.check_for_toggle_param_patch("/json/settings/notifications", "enable_desktop_notifications")
+        self.check_for_toggle_param_patch("/json/settings/notifications", "enable_stream_desktop_notifications")
+        self.check_for_toggle_param_patch("/json/settings/notifications", "enable_stream_sounds")
+        self.check_for_toggle_param_patch("/json/settings/notifications", "enable_sounds")
+        self.check_for_toggle_param_patch("/json/settings/notifications", "enable_offline_email_notifications")
+        self.check_for_toggle_param_patch("/json/settings/notifications", "enable_offline_push_notifications")
+        self.check_for_toggle_param_patch("/json/settings/notifications", "enable_online_push_notifications")
+        self.check_for_toggle_param_patch("/json/settings/notifications", "enable_digest_emails")
 
     def test_ui_settings(self):
         # type: () -> None
-        self.check_for_toggle_param("/json/ui_settings/change", "autoscroll_forever")
-        self.check_for_toggle_param("/json/ui_settings/change", "default_desktop_notifications")
+        self.check_for_toggle_param_patch("/json/settings/ui", "autoscroll_forever")
+        self.check_for_toggle_param_patch("/json/settings/ui", "default_desktop_notifications")
 
     def test_toggling_left_side_userlist(self):
         # type: () -> None
-        self.check_for_toggle_param("/json/left_side_userlist", "left_side_userlist")
+        self.check_for_toggle_param_patch("/json/settings/display", "left_side_userlist")
 
     def test_time_setting(self):
         # type: () -> None
-        self.check_for_toggle_param("/json/time_setting", "twenty_four_hour_time")
+        self.check_for_toggle_param_patch("/json/settings/display", "twenty_four_hour_time")
 
     def test_enter_sends_setting(self):
         # type: () -> None
@@ -1877,6 +1906,7 @@ class HomeTest(ZulipTestCase):
             "presence_disabled",
             "product_name",
             "prompt_for_invites",
+            "realm_add_emoji_by_admins_only",
             "realm_allow_message_editing",
             "realm_authentication_methods",
             "realm_create_stream_by_admins_only",
@@ -2260,7 +2290,7 @@ class TestOpenRealms(ZulipTestCase):
         self.assertEqual(get_unique_open_realm(), None)
         mit_realm.restricted_to_domain = False
         mit_realm.save()
-        self.assertTrue(completely_open(mit_realm.domain))
+        self.assertTrue(completely_open(mit_realm))
         self.assertEqual(get_unique_open_realm(), None)
         with self.settings(SYSTEM_ONLY_REALMS={"zulip.com"}):
             self.assertEqual(get_unique_open_realm(), mit_realm)
